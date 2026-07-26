@@ -1,0 +1,13 @@
+{
+  "name": "file-box",
+  "version": "1.0.0",
+  "description": "共享文件箱 - 上传/下载/删除文件",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "4.18.2",
+    "multer": "^2.2.0"
+  }
+}

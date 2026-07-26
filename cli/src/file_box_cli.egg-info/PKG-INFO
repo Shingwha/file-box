@@ -1,0 +1,5 @@
+Metadata-Version: 2.4
+Name: file-box-cli
+Version: 1.0.0
+Summary: CLI for the shared file-box — list, download, upload, delete files
+Requires-Python: >=3.10

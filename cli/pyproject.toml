@@ -1,0 +1,9 @@
+[project]
+name = "file-box-cli"
+version = "1.0.0"
+description = "CLI for the shared file-box — list, download, upload, delete files"
+requires-python = ">=3.10"
+
+[project.scripts]
+file-box = "file_box_cli.cli:main"
+fb = "file_box_cli.cli:main"

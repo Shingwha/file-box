@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>📂 共享文件箱</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,-apple-system,sans-serif;background:#0d1117;color:#e6edf3;min-height:100vh;padding:2rem 1rem;display:flex;flex-direction:column;align-items:center}
+.container{width:100%;max-width:640px}
+h1{font-size:1.3rem;font-weight:500;letter-spacing:-.02em;margin-bottom:.2rem}
+.sub{color:#8b949e;font-size:.85rem;margin-bottom:1.5rem}
+.section{margin-bottom:2rem}
+.section-title{font-size:.85rem;font-weight:500;color:#8b949e;margin-bottom:.6rem;display:flex;align-items:center;gap:.4rem}
+.card{background:#161b22;border:1px solid #30363d;border-radius:10px;overflow:hidden}
+.empty-state{padding:2rem;text-align:center;color:#484f58;font-size:.85rem}
+.file-row{display:flex;align-items:center;padding:.55rem .8rem;border-bottom:1px solid #21262d;gap:.5rem}
+.file-row:last-child{border-bottom:none}
+.file-row .icon{font-size:1.1rem;flex-shrink:0}
+.file-row .info{flex:1;min-width:0}
+.file-row .info .name{font-size:.85rem;color:#e6edf3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file-row .info .meta{font-size:.72rem;color:#484f58;margin-top:1px}
+.file-row .actions{display:flex;gap:4px;flex-shrink:0}
+.btn-icon{background:none;border:1px solid #30363d;border-radius:5px;color:#8b949e;cursor:pointer;width:30px;height:28px;font-size:.8rem;display:flex;align-items:center;justify-content:center;transition:.15s;text-decoration:none}
+.btn-icon:hover{border-color:#58a6ff;color:#58a6ff;background:rgba(88,166,255,.08)}
+.btn-icon.danger:hover{border-color:#f85149;color:#f85149;background:rgba(248,81,73,.1)}
+.file-row .cb{width:20px;height:20px;margin:0;cursor:pointer;accent-color:#58a6ff;flex-shrink:0}
+.batch-bar{display:none;align-items:center;justify-content:space-between;padding:.5rem .8rem;background:#1f2937;border-bottom:1px solid #30363d;font-size:.82rem}
+.batch-bar .count{color:#e6edf3}
+.batch-bar .btn-batch{background:#da3633;color:#fff;border:none;border-radius:5px;padding:.35rem .7rem;font-size:.8rem;cursor:pointer}
+.batch-bar .btn-batch:hover{background:#f85149}
+#selectAll{accent-color:#58a6ff;margin-right:6px;cursor:pointer}
+.dropzone{border:2px dashed #30363d;border-radius:8px;padding:1.5rem;text-align:center;cursor:pointer;transition:.2s;margin:.8rem}
+.dropzone:hover,.dropzone.dragover{border-color:#58a6ff;background:rgba(88,166,255,.05)}
+.dropzone-icon{font-size:2rem;margin-bottom:.3rem}
+.dropzone-text{color:#8b949e;font-size:.85rem}
+.dropzone-hint{color:#484f58;font-size:.72rem;margin-top:.3rem}
+input[type=file]{display:none}
+.upload-preview{margin:0 .8rem .8rem;display:none}
+.upload-preview .file-item{display:flex;align-items:center;justify-content:space-between;background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:.45rem .7rem;margin-bottom:.35rem;font-size:.82rem}
+.upload-preview .file-name{color:#e6edf3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px}
+.upload-preview .file-size{color:#8b949e;font-size:.72rem;flex-shrink:0;margin:.4rem}
+button.primary{width:calc(100% - 1.6rem);display:block;margin:0 .8rem .8rem;padding:.6rem;border:none;border-radius:6px;font-size:.85rem;font-weight:500;cursor:pointer;transition:.2s}
+button.primary.ready{background:#238636;color:#fff}
+button.primary.ready:hover{background:#2ea043}
+button.primary.loading{background:#1f6feb;color:#fff;cursor:default;pointer-events:none}
+button.primary:disabled{background:#21262d;color:#484f58;cursor:default}
+.progress{margin:0 .8rem .8rem;display:none}
+.progress-bar{height:3px;background:#30363d;border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;width:0%;background:#238636;border-radius:3px;transition:width .3s}
+.progress-text{color:#8b949e;font-size:.72rem;margin-top:.3rem;text-align:center}
+.status{margin:.8rem;padding:.5rem .7rem;border-radius:6px;font-size:.82rem;display:none}
+.status.success{display:block;background:rgba(35,134,54,.12);border:1px solid rgba(35,134,54,.25);color:#3fb950}
+.status.error{display:block;background:rgba(248,81,73,.12);border:1px solid rgba(248,81,73,.25);color:#f85149}
+/* login */
+#loginOverlay{display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.7);align-items:center;justify-content:center}
+#loginOverlay .login-box{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:2rem;width:90%;max-width:360px;box-shadow:0 16px 48px rgba(0,0,0,.5);text-align:center}
+#loginOverlay .login-icon{font-size:2.5rem;margin-bottom:.5rem}
+#loginOverlay .login-title{font-size:1rem;font-weight:500;margin-bottom:1rem}
+#loginOverlay input{width:100%;padding:.6rem .8rem;border:1px solid #30363d;border-radius:6px;background:#0d1117;color:#e6edf3;font-size:.9rem;outline:none;margin-bottom:.8rem}
+#loginOverlay input:focus{border-color:#58a6ff}
+#loginOverlay .login-error{color:#f85149;font-size:.82rem;margin-bottom:.5rem;display:none}
+#loginOverlay button{width:100%;padding:.6rem;border:none;border-radius:6px;font-size:.85rem;font-weight:500;cursor:pointer;background:#238636;color:#fff}
+#loginOverlay button:hover{background:#2ea043}
+/* delete modal */
+#deleteModal{display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.6);align-items:center;justify-content:center}
+#deleteModal .modal-box{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:1.8rem;width:90%;max-width:380px;box-shadow:0 16px 48px rgba(0,0,0,.5);text-align:center}
+#deleteModal .modal-icon{font-size:2.5rem;margin-bottom:.5rem}
+#deleteModal .modal-title{font-size:1rem;font-weight:500;margin-bottom:.3rem}
+#deleteModal .modal-hint{color:#8b949e;font-size:.85rem;margin-bottom:1rem}
+#deleteModal .modal-filename{background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:.5rem;font-size:.85rem;color:#f85149;margin-bottom:1.2rem;word-break:break-all;text-align:center}
+#deleteModal .modal-actions{display:flex;gap:.5rem}
+#deleteModal .modal-cancel{flex:1;padding:.55rem;border:1px solid #30363d;border-radius:6px;background:transparent;color:#e6edf3;font-size:.85rem;cursor:pointer}
+#deleteModal .modal-confirm{flex:1;padding:.55rem;border:none;border-radius:6px;background:#da3633;color:#fff;font-size:.85rem;font-weight:500;cursor:pointer}
+</style>
+</head>
+<body>
+
+<div id="loginOverlay">
+<div class="login-box">
+<div class="login-icon">🔒</div>
+<div class="login-title">文件箱已加密</div>
+<input type="password" id="passwordInput" placeholder="输入访问密码" autocomplete="off">
+<div class="login-error" id="loginError">密码错误，请重试</div>
+<button id="loginBtn">解锁</button>
+</div>
+</div>
+
+<div class="container" id="mainContent" style="display:none">
+<h1>📂 共享文件箱</h1>
+<p class="sub">⬇ 下载文件 · ⬆ 上传文件 <span id="storageInfo" style="color:#484f58"></span></p>
+
+<div class="section">
+<div class="section-title">
+<label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:.82rem;color:#8b949e">
+<input type="checkbox" id="selectAll"> 全选
+</label>
+<span id="fileCount" style="color:#484f58;font-size:.72rem"></span>
+</div>
+<div class="card" id="fileListContainer">
+<div class="batch-bar" id="batchBar">
+<span class="count">已选 <span id="selCount">0</span> 个文件</span>
+<button class="btn-batch" id="btnBatchDel">🗑 删除选中</button>
+</div>
+<div class="empty-state" id="emptyDownload">暂无文件</div>
+</div>
+</div>
+
+<div class="section">
+<div class="section-title">📤 上传文件</div>
+<div class="card">
+<div class="dropzone" id="dropzone">
+<div class="dropzone-icon">📁</div>
+<div class="dropzone-text">点击选择 或 拖拽文件到这里</div>
+<div class="dropzone-hint">最大 500MB · 支持多文件</div>
+</div>
+<input type="file" id="fileInput" multiple>
+<div class="upload-preview" id="uploadPreview"></div>
+<button class="primary" id="uploadBtn" disabled>⬆ 上传</button>
+<div class="progress" id="progress">
+<div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+<div class="progress-text" id="progressText">准备中...</div>
+</div>
+<div class="status" id="status"></div>
+</div>
+</div>
+</div>
+
+<div id="deleteModal">
+<div class="modal-box">
+<div class="modal-icon">⚠️</div>
+<div class="modal-title">确认删除</div>
+<div class="modal-hint">此操作不可撤销</div>
+<div class="modal-filename" id="delFileName"></div>
+<div class="modal-actions">
+<button class="modal-cancel" id="delCancel">取消</button>
+<button class="modal-confirm" id="delConfirm">确认删除</button>
+</div>
+</div>
+</div>
+
+<script>
+const TOKEN_KEY = 'file_box_token';
+
+// ---- Auth ----
+function token() { return localStorage.getItem(TOKEN_KEY) || ''; }
+function authUrl(url) {
+  const t = token();
+  return t ? url + (url.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(t) : url;
+}
+
+async function init() {
+  // Check if auth is needed
+  try {
+    const r = await fetch('/api/status');
+    const data = await r.json();
+    if (!data.auth) {
+      showApp();
+      return;
+    }
+  } catch(e) { showApp(); return; }
+
+  // Auth required — check saved token
+  const saved = token();
+  if (saved) {
+    try {
+      const r = await fetch(authUrl('/api/files'));
+      if (r.ok) { showApp(); return; }
+    } catch(e) {}
+    localStorage.removeItem(TOKEN_KEY);
+  }
+  showLogin();
+}
+
+async function doLogin() {
+  const pwd = document.getElementById('passwordInput').value;
+  const errEl = document.getElementById('loginError');
+  const btn = document.getElementById('loginBtn');
+  if (!pwd) return;
+  btn.disabled = true; btn.textContent = '验证中...';
+  errEl.style.display = 'none';
+  try {
+    const r = await fetch('/api/auth', { method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pwd }) });
+    const data = await r.json();
+    if (data.ok) {
+      localStorage.setItem(TOKEN_KEY, data.token);
+      showApp();
+    } else {
+      errEl.style.display = 'block';
+      btn.disabled = false; btn.textContent = '解锁';
+    }
+  } catch(e) {
+    errEl.textContent = '网络错误，请重试';
+    errEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = '解锁';
+  }
+}
+
+function showLogin() {
+  document.getElementById('loginOverlay').style.display = 'flex';
+  document.getElementById('mainContent').style.display = 'none';
+  document.getElementById('passwordInput').focus();
+}
+async function loadStorage() {
+  try {
+    const r = await fetch(authUrl('/api/storage'));
+    if (!r.ok) return;
+    const d = await r.json();
+    document.getElementById('storageInfo').textContent = ' · 💾 ' + d.used + ' / ' + d.total + ' (' + d.files + ' 个文件, ' + d.usagePercent + ')';
+  } catch(e) {}
+}
+function showApp() {
+  document.getElementById('loginOverlay').style.display = 'none';
+  document.getElementById('mainContent').style.display = 'block';
+  loadFiles();
+  loadStorage();
+}
+
+document.getElementById('loginBtn').onclick = doLogin;
+document.getElementById('passwordInput').onkeydown = e => { if (e.key === 'Enter') doLogin(); };
+
+// ---- File list ----
+let selectedNames = new Set();
+
+async function loadFiles() {
+  try {
+    const r = await fetch(authUrl('/api/files'));
+    if (!r.ok) return;
+    const data = await r.json();
+    const files = data.files || [];
+    const c = document.getElementById('fileListContainer');
+    const ec = document.getElementById('emptyDownload');
+    const fc = document.getElementById('fileCount');
+    c.querySelectorAll('.file-row').forEach(el => el.remove());
+    if (!files.length) { ec.style.display = 'block'; fc.textContent = ''; updateBatchBar(); return; }
+    ec.style.display = 'none';
+    fc.textContent = '(' + files.length + ')';
+    const icons = { pdf:'📄', md:'📝', py:'🐍', js:'📜', json:'📋', csv:'📊', txt:'📄', png:'🖼', jpg:'🖼', jpeg:'🖼', gif:'🖼', webp:'🖼', mp3:'🎵', mp4:'🎬', zip:'📦', tar:'📦', gz:'📦' };
+    files.forEach(f => {
+      const row = document.createElement('div'); row.className = 'file-row';
+      const ext = f.name.lastIndexOf('.') > 0 ? f.name.split('.').pop().toLowerCase() : '';
+      const icon = icons[ext] || '📄';
+      const enc = encodeURIComponent(f.name);
+      const safeName = f.name.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+      const checked = selectedNames.has(f.name) ? 'checked' : '';
+      row.innerHTML =
+        '<input type="checkbox" class="cb" data-name="' + f.name.replace(/"/g,'&quot;') + '" ' + checked + ' onchange="toggleSelect(this)">' +
+        '<span class="icon">' + icon + '</span>' +
+        '<div class="info"><div class="name">' + safeName + '</div><div class="meta">' + f.size + '</div></div>' +
+        '<div class="actions">' +
+        '<a href="' + authUrl('/api/files/' + enc) + '" class="btn-icon" download title="下载">⬇</a>' +
+        '<button class="btn-icon danger" onclick="showDelete(\'' + enc + '\',\'' + f.name.replace(/'/g,"\\'") + '\')" title="删除">✕</button>' +
+        '</div>';
+      c.appendChild(row);
+    });
+    updateBatchBar();
+  } catch(e) {}
+}
+
+function toggleSelect(cb) {
+  const name = cb.dataset.name;
+  if (cb.checked) selectedNames.add(name); else selectedNames.delete(name);
+  updateBatchBar();
+}
+
+function updateBatchBar() {
+  const bar = document.getElementById('batchBar');
+  const cnt = document.getElementById('selCount');
+  const n = selectedNames.size;
+  cnt.textContent = n;
+  bar.style.display = n > 0 ? 'flex' : 'none';
+}
+
+document.getElementById('selectAll').onchange = function() {
+  const cbs = document.querySelectorAll('#fileListContainer .cb');
+  cbs.forEach(cb => {
+    cb.checked = this.checked;
+    if (this.checked) selectedNames.add(cb.dataset.name);
+    else selectedNames.delete(cb.dataset.name);
+  });
+  updateBatchBar();
+};
+
+document.getElementById('btnBatchDel').onclick = function() {
+  if (selectedNames.size === 0) return;
+  const names = [...selectedNames];
+  dfn.textContent = '即将删除 ' + names.length + ' 个文件:\n' + names.join('\n');
+  batchDeleteTarget = names;
+  dmBatch.style.display = 'flex';
+};
+
+// ---- Delete single ----
+let deleteTarget = null;
+let batchDeleteTarget = null;
+const dm = document.getElementById('deleteModal');
+const dmBatch = document.getElementById('deleteModalBatch');
+const dfn = document.getElementById('delFileName');
+document.getElementById('delCancel').onclick = () => { dm.style.display = 'none'; deleteTarget = null; };
+document.getElementById('delConfirm').onclick = async () => {
+  if (!deleteTarget) return;
+  const enc = deleteTarget; dm.style.display = 'none'; deleteTarget = null;
+  try {
+    const r = await fetch(authUrl('/api/files/' + enc), { method: 'DELETE' });
+    if (r.ok || r.status === 404) loadFiles(); else alert('删除失败');
+  } catch(e) { alert('删除失败'); }
+};
+dm.onclick = e => { if (e.target === dm) { dm.style.display = 'none'; deleteTarget = null; } };
+window.showDelete = function(enc, name) { deleteTarget = enc; dfn.textContent = name; dm.style.display = 'flex'; };
+
+// ---- Delete batch ----
+document.getElementById('delBatchCancel').onclick = () => { dmBatch.style.display = 'none'; batchDeleteTarget = null; };
+document.getElementById('delBatchConfirm').onclick = async () => {
+  if (!batchDeleteTarget || batchDeleteTarget.length === 0) return;
+  const names = batchDeleteTarget; dmBatch.style.display = 'none'; batchDeleteTarget = null;
+  let ok = 0, fail = 0;
+  for (const name of names) {
+    try {
+      const r = await fetch(authUrl('/api/files/' + encodeURIComponent(name)), { method: 'DELETE' });
+      if (r.ok || r.status === 404) ok++; else fail++;
+    } catch(e) { fail++; }
+  }
+  selectedNames.clear();
+  loadFiles();
+  if (fail === 0) {
+    st.className = 'status success'; st.innerHTML = '✅ 成功删除 ' + ok + ' 个文件'; st.style.display = 'block';
+  } else {
+    st.className = 'status error'; st.textContent = '⚠ 删除 ' + ok + ' 个，' + fail + ' 个失败'; st.style.display = 'block';
+  }
+};
+dmBatch.onclick = e => { if (e.target === dmBatch) { dmBatch.style.display = 'none'; batchDeleteTarget = null; } };
+
+
+// ---- Upload ----
+(() => {
+  const dz = document.getElementById('dropzone'), fi = document.getElementById('fileInput');
+  const up = document.getElementById('uploadPreview'), btn = document.getElementById('uploadBtn');
+  const pg = document.getElementById('progress'), pf = document.getElementById('progressFill');
+  const pt = document.getElementById('progressText'), st = document.getElementById('status');
+  let selected = [];
+
+  dz.onclick = () => fi.click();
+  dz.ondragover = e => { e.preventDefault(); dz.classList.add('dragover'); };
+  dz.ondragleave = () => dz.classList.remove('dragover');
+  dz.ondrop = e => { e.preventDefault(); dz.classList.remove('dragover'); handleFiles([...e.dataTransfer.files]); };
+  fi.onchange = () => handleFiles([...fi.files]);
+
+  function handleFiles(files) {
+    selected = files;
+    up.style.display = 'block'; up.innerHTML = '';
+    files.forEach(f => {
+      const d = document.createElement('div'); d.className = 'file-item';
+      const s = f.size > 1048576 ? (f.size / 1048576).toFixed(1) + ' MB' : (f.size / 1024).toFixed(1) + ' KB';
+      d.innerHTML = '<span class="file-name">' + f.name + '</span><span class="file-size">' + s + '</span>';
+      up.appendChild(d);
+    });
+    btn.textContent = '⬆ 上传 ' + files.length + ' 个文件';
+    btn.className = 'primary ready'; btn.disabled = false; st.style.display = 'none';
+  }
+
+  btn.onclick = async () => {
+    if (!selected.length) return;
+    const form = new FormData();
+    selected.forEach(f => form.append('file', f));
+    btn.className = 'primary loading'; btn.textContent = '⏳ 上传中...'; btn.disabled = true;
+    pg.style.display = 'block';
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/upload?token=' + encodeURIComponent(token()), true);
+    xhr.upload.onprogress = e => {
+      if (e.lengthComputable) {
+        const pct = Math.round(e.loaded / e.total * 100);
+        pf.style.width = pct + '%';
+        pt.textContent = pct + '% · ' + (e.loaded / 1048576).toFixed(1) + ' / ' + (e.total / 1048576).toFixed(1) + ' MB';
+      }
+    };
+    xhr.onload = () => {
+      pg.style.display = 'none';
+      if (xhr.status === 200) {
+        st.className = 'status success'; st.innerHTML = '✅ 上传成功'; st.style.display = 'block';
+        loadFiles();
+      } else {
+        try {
+          const err = JSON.parse(xhr.responseText);
+          st.className = 'status error'; st.textContent = '❌ ' + err.error; st.style.display = 'block';
+        } catch(e) {
+          st.className = 'status error'; st.textContent = '❌ 上传失败 (' + xhr.status + ')'; st.style.display = 'block';
+        }
+      }
+      btn.className = 'primary'; btn.textContent = '⬆ 继续上传'; btn.disabled = true;
+      selected = []; up.style.display = 'none'; fi.value = '';
+    };
+    xhr.onerror = () => {
+      pg.style.display = 'none'; btn.className = 'primary'; btn.textContent = '⬆ 重试';
+      btn.disabled = false; st.className = 'status error'; st.textContent = '❌ 网络错误'; st.style.display = 'block';
+    };
+    xhr.send(form);
+  };
+})();
+
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,3 @@
+[console_scripts]
+fb = file_box_cli.cli:main
+file-box = file_box_cli.cli:main
